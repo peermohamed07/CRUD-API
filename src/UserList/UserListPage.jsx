@@ -13,27 +13,25 @@ const UserListPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [popupOpen, setPopupOpen] = useState(false);
 
-    // Fetch color data from the correct API endpoint
     const fetchUsers = async (page = 1) => {
         try {
             const res = await axios.get(`https://reqres.in/api/unknown?page=${page}`);
             const colorData = res.data.data;
 
-            // Transform color data to match your user structure
             const transformedUsers = colorData.map(item => ({
                 id: item.id,
                 name: item.name,
                 year: item.year,
                 color: item.color,
                 pantone_value: item.pantone_value,
-                // Add placeholder fields for your table structure
                 email: `${item.name.replace(/\s+/g, '').toLowerCase()}@example.com`,
                 first_name: item.name.split(' ')[0] || item.name,
                 last_name: item.name.split(' ')[1] || '',
                 avatar: `https://via.placeholder.com/40/${item.color.replace('#', '')}/ffffff?text=${item.name.charAt(0)}`
             }));
 
-            setUsers(transformedUsers);
+            const storedUsers = JSON.parse(localStorage.getItem("users")) || [];
+            setUsers([...transformedUsers, ...storedUsers]);
         } catch (err) {
             console.log("Error fetching data:", err);
         }
@@ -65,22 +63,22 @@ const UserListPage = () => {
 
     const handleSave = (formData) => {
         if (selectedUser) {
-            // Update user
             const updatedUsers = users.map((u) =>
                 u.id === selectedUser.id ? { ...u, ...formData } : u
             );
             setUsers(updatedUsers);
+            localStorage.setItem("users", JSON.stringify(updatedUsers.filter(u => u.id > 1000))); // keep only custom users
         } else {
-            // Create new user
             const newUser = {
                 id: Date.now(),
                 ...formData,
-                // Add default color properties for new users
                 color: "#000000",
                 pantone_value: "00-0000",
-                year: new Date().getFullYear()
+                year: new Date().getFullYear(),
             };
-            setUsers([...users, newUser]);
+            const updatedUsers = [...users, newUser];
+            setUsers(updatedUsers);
+            localStorage.setItem("users", JSON.stringify([...JSON.parse(localStorage.getItem("users")) || [], newUser]));
         }
         handleClosePopup();
     };
@@ -94,10 +92,15 @@ const UserListPage = () => {
     };
 
     // Filter users based on search
-    const filteredUsers = users.filter((user) =>
-        `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredUsers = users.filter((user) => {
+        const fullName = `${user.first_name || ""} ${user.last_name || ""}`.toLowerCase();
+        const name = (user.name || "").toLowerCase();
+        return (
+            fullName.includes(searchTerm.toLowerCase()) ||
+            name.includes(searchTerm.toLowerCase())
+        );
+    });
+
 
     // Pagination
     const usersPerPage = 5;
@@ -105,6 +108,22 @@ const UserListPage = () => {
     const indexOfFirstUser = indexOfLastUser - usersPerPage;
     const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
     const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+    // Load from localStorage on mount
+    useEffect(() => {
+        const storedUsers = localStorage.getItem("users");
+        if (storedUsers) {
+            setUsers(JSON.parse(storedUsers));
+        } else {
+            fetchUsers(currentPage); // fetch if nothing in storage
+        }
+    }, [currentPage]);
+
+    // Whenever users change, save to localStorage
+    useEffect(() => {
+        if (users.length > 0) {
+            localStorage.setItem("users", JSON.stringify(users));
+        }
+    }, [users]);
 
     return (
         <div className="p-8">
@@ -197,6 +216,7 @@ const UserListPage = () => {
                         style={{
                             backgroundColor: currentPage === i + 1 ? "blue" : "white",
                             color: currentPage === i + 1 ? "white" : "black",
+                            border: '1px solid black'
                         }}
                     >
                         {i + 1}
