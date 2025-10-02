@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Button, Card, FormControl, InputLabel, Input, FormHelperText } from "@mui/material";
-import UserFormPopup from "./UserFormPopup";
+import UserFormPopup from "./UserFormPopUp";
 import "./UserListPage.css";
 import ConfirmDialog from "./ConfirmPopup";
-
 const UserListPage = () => {
     const [users, setUsers] = useState([]);
     const [openDialog, setOpenDialog] = useState(false);
@@ -62,6 +61,8 @@ const UserListPage = () => {
                 })
                 .catch((err) => console.log("Error updating user:", err));
         } else {
+            console.log(formData,"formdata")
+            
             axios
                 .post("https://reqres.in/api/users", formData, {
                     headers: {
@@ -69,6 +70,7 @@ const UserListPage = () => {
                     },
                 })
                 .then((res) => {
+                    console.log(res,"res")
                     const newUser = { id: Date.now(), ...formData };
                     setUsers([...users, newUser]);
                 })
