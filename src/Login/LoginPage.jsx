@@ -3,11 +3,11 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { FaUser, FaLock } from "react-icons/fa";
 import TextField from "@mui/material/TextField";
-import "./LoginPage.css"; 
+import "./LoginPage.css";
 
 const LoginPage = () => {
-    const [email, setEmail] = useState("eve.holt@reqres.in");
-    const [password, setPassword] = useState("cityslicka");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
     const [remember, setRemember] = useState(false);
     const [error, setError] = useState("");
     const navigate = useNavigate();
@@ -16,21 +16,23 @@ const LoginPage = () => {
         e.preventDefault();
         setError("");
 
+        // Client-side check
+        if (email !== "eve.holt@reqres.in" || password !== "cityslicka") {
+            setError("Invalid email or password!");
+            return; // stop here
+        }
+
         try {
+            // Only call API if credentials match
             const res = await axios.post(
                 "https://reqres.in/api/login",
-                {
-                    email,
-                    password,
+                { email, password }, {
+                headers: {
+                    "x-api-key": "reqres-free-v1",
                 },
-                {
-                    headers: {
-                        "x-api-key": "reqres-free-v1", 
-                    },
-                }
+            }
             );
 
-            console.log(res.data, "resdata");
             if (res.data.token) {
                 if (remember) {
                     localStorage.setItem("token", res.data.token);
@@ -40,9 +42,10 @@ const LoginPage = () => {
                 navigate("/users");
             }
         } catch (err) {
-            setError("Invalid email or password!");
+            setError("Something went wrong. Please try again!");
         }
     };
+
 
     return (
         <div className="login-container">

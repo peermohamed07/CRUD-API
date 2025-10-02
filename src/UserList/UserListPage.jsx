@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Button, Card, FormControl, InputLabel, Input, FormHelperText } from "@mui/material";
+import { Button, Card } from "@mui/material";
 import UserFormPopup from "./UserFormPopUp";
-import "./UserListPage.css";
 import ConfirmDialog from "./ConfirmPopup";
+import "./UserListPage.css";
+
 const UserListPage = () => {
     const [users, setUsers] = useState([]);
     const [openDialog, setOpenDialog] = useState(false);
@@ -12,16 +13,35 @@ const UserListPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [popupOpen, setPopupOpen] = useState(false);
 
+    // Fetch color data from the correct API endpoint
+    const fetchUsers = async (page = 1) => {
+        try {
+            const res = await axios.get(`https://reqres.in/api/unknown?page=${page}`);
+            const colorData = res.data.data;
+
+            // Transform color data to match your user structure
+            const transformedUsers = colorData.map(item => ({
+                id: item.id,
+                name: item.name,
+                year: item.year,
+                color: item.color,
+                pantone_value: item.pantone_value,
+                // Add placeholder fields for your table structure
+                email: `${item.name.replace(/\s+/g, '').toLowerCase()}@example.com`,
+                first_name: item.name.split(' ')[0] || item.name,
+                last_name: item.name.split(' ')[1] || '',
+                avatar: `https://via.placeholder.com/40/${item.color.replace('#', '')}/ffffff?text=${item.name.charAt(0)}`
+            }));
+
+            setUsers(transformedUsers);
+        } catch (err) {
+            console.log("Error fetching data:", err);
+        }
+    };
+
     useEffect(() => {
         fetchUsers(currentPage);
     }, [currentPage]);
-
-    const fetchUsers = (page = 1) => {
-        axios
-            .get(`https://reqres.in/api/users?page=${page}`)
-            .then((res) => setUsers(res.data.data))
-            .catch((err) => console.log("Error fetching users:", err));
-    };
 
     const handleOpenDialog = (id) => {
         setSelectedUser(id);
@@ -36,7 +56,6 @@ const UserListPage = () => {
     const handleOpenPopup = (user = null) => {
         setSelectedUser(user);
         setPopupOpen(true);
-        
     };
 
     const handleClosePopup = () => {
@@ -46,63 +65,41 @@ const UserListPage = () => {
 
     const handleSave = (formData) => {
         if (selectedUser) {
-            axios
-                .put(`https://reqres.in/api/users/${selectedUser.id}`, formData, {
-                    headers: {
-                        "x-api-key": "reqres-free-v1",
-                    },
-                })
-                .then(() => {
-                    setUsers(
-                        users.map((u) =>
-                            u.id === selectedUser.id ? { ...u, ...formData } : u
-                        )
-                    );
-                })
-                .catch((err) => console.log("Error updating user:", err));
+            // Update user
+            const updatedUsers = users.map((u) =>
+                u.id === selectedUser.id ? { ...u, ...formData } : u
+            );
+            setUsers(updatedUsers);
         } else {
-            console.log(formData,"formdata")
-            
-            axios
-                .post("https://reqres.in/api/users", formData, {
-                    headers: {
-                        "x-api-key": "reqres-free-v1",
-                    },
-                })
-                .then((res) => {
-                    console.log(res,"res")
-                    const newUser = { id: Date.now(), ...formData };
-                    setUsers([...users, newUser]);
-                })
-                .catch((err) => console.log("Error creating user:", err));
+            // Create new user
+            const newUser = {
+                id: Date.now(),
+                ...formData,
+                // Add default color properties for new users
+                color: "#000000",
+                pantone_value: "00-0000",
+                year: new Date().getFullYear()
+            };
+            setUsers([...users, newUser]);
         }
-
         handleClosePopup();
     };
 
     const handleConfirmDelete = () => {
         if (selectedUser) {
-            axios
-                .delete(`https://reqres.in/api/users/${selectedUser}`, {
-                    headers: {
-                        "x-api-key": "reqres-free-v1",
-                    },
-                })
-                .then(() => {
-                    setUsers(users.filter((u) => u.id !== selectedUser));
-                    handleCloseDialog();
-                })
-                .catch((err) => console.log("Error deleting user:", err));
+            const filteredUsers = users.filter((u) => u.id !== selectedUser);
+            setUsers(filteredUsers);
+            handleCloseDialog();
         }
     };
 
+    // Filter users based on search
     const filteredUsers = users.filter((user) =>
-        `${user.first_name} ${user.last_name}`
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase())
+        `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-
+    // Pagination
     const usersPerPage = 5;
     const indexOfLastUser = currentPage * usersPerPage;
     const indexOfFirstUser = indexOfLastUser - usersPerPage;
@@ -125,7 +122,7 @@ const UserListPage = () => {
                             }}
                         >
                             <div>Users</div>
-                            <div className="flex1">
+                            <div className="flex1" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                                 <input
                                     type="text"
                                     placeholder="Input search text"
@@ -133,12 +130,7 @@ const UserListPage = () => {
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
-
-                                <Button
-                                    variant="contained"
-                                    size="small"
-                                    onClick={() => handleOpenPopup()}
-                                >
+                                <Button variant="contained" size="small" onClick={() => handleOpenPopup()}>
                                     Create User
                                 </Button>
                             </div>
@@ -151,12 +143,8 @@ const UserListPage = () => {
                                 <tr className="bg-gray-100 table-headers border-b border-gray-300">
                                     <th className="py-2 px-4 border border-gray-300">Avatar</th>
                                     <th className="py-2 px-4 border border-gray-300">Email</th>
-                                    <th className="py-2 px-4 border border-gray-300">
-                                        First Name
-                                    </th>
-                                    <th className="py-2 px-4 border border-gray-300">
-                                        Last Name
-                                    </th>
+                                    <th className="py-2 px-4 border border-gray-300">First Name</th>
+                                    <th className="py-2 px-4 border border-gray-300">Last Name</th>
                                     <th className="py-2 px-4 border border-gray-300">Action</th>
                                 </tr>
                             </thead>
@@ -165,41 +153,23 @@ const UserListPage = () => {
                                     <tr key={user.id} className="table-row-style">
                                         <td className="py-2 px-4 border border-gray-300">
                                             <img
-                                                src={user.avatar || "https://via.placeholder.com/40"}
-                                                alt={user.first_name}
+                                                src={user.avatar}
+                                                alt={user.name}
                                                 className="w-10 h-10 rounded-full object-cover mx-auto image"
+                                                style={{ backgroundColor: user.color }}
                                             />
                                         </td>
-                                        <td className="py-2 px-4 border border-gray-300">
-                                            {user.email}
-                                        </td>
-                                        <td className="py-2 px-4 border border-gray-300">
-                                            {user.first_name}
-                                        </td>
-                                        <td className="py-2 px-4 border border-gray-300">
-                                            {user.last_name}
-                                        </td>
+                                        <td className="py-2 px-4 border border-gray-300">{user.email}</td>
+                                        <td className="py-2 px-4 border border-gray-300">{user.first_name}</td>
+                                        <td className="py-2 px-4 border border-gray-300">{user.last_name}</td>
                                         <td className="py-2 px-4 border border-gray-300">
                                             <div
-                                                style={{
-                                                    display: "flex",
-                                                    flexDirection: "row",
-                                                    gap: "10px",
-                                                }}
+                                                style={{ display: "flex", gap: "10px", justifyContent: "left" }}
                                             >
-                                                <Button
-                                                    variant="contained"
-                                                    size="small"
-                                                    onClick={() => handleOpenPopup(user)}
-                                                >
+                                                <Button variant="contained" size="small" onClick={() => handleOpenPopup(user)}>
                                                     Edit
                                                 </Button>
-                                                <Button
-                                                    variant="contained"
-                                                    color="error"
-                                                    size="small"
-                                                    onClick={() => handleOpenDialog(user.id)}
-                                                >
+                                                <Button variant="contained" color="error" size="small" onClick={() => handleOpenDialog(user.id)}>
                                                     Delete
                                                 </Button>
                                             </div>
@@ -212,13 +182,10 @@ const UserListPage = () => {
                 </Card>
             </div>
 
-            {/* 🔹 Pagination */}
-            <div className="pagination">
+            {/* Pagination */}
+            <div className="pagination" style={{ display: "flex", justifyContent: "center", gap: "5px", marginTop: "20px" }}>
                 {currentPage > 1 && (
-                    <button
-                        onClick={() => setCurrentPage((prev) => prev - 1)}
-                        className="px-3 py-1 border rounded bg-white"
-                    >
+                    <button onClick={() => setCurrentPage((prev) => prev - 1)} className="px-3 py-1 border rounded bg-white">
                         ←
                     </button>
                 )}
@@ -226,36 +193,24 @@ const UserListPage = () => {
                     <button
                         key={i + 1}
                         onClick={() => setCurrentPage(i + 1)}
+                        className="px-3 py-1 border rounded"
                         style={{
                             backgroundColor: currentPage === i + 1 ? "blue" : "white",
                             color: currentPage === i + 1 ? "white" : "black",
-                            border: "1px solid gray",
                         }}
                     >
                         {i + 1}
                     </button>
                 ))}
                 {currentPage < totalPages && (
-                    <button
-                        onClick={() => setCurrentPage((prev) => prev + 1)}
-                        className="px-3 py-1 border rounded bg-white"
-                    >
+                    <button onClick={() => setCurrentPage((prev) => prev + 1)} className="px-3 py-1 border rounded bg-white">
                         →
                     </button>
                 )}
             </div>
 
-            <UserFormPopup
-                open={popupOpen}
-                onClose={handleClosePopup}
-                user={selectedUser}
-                onSave={handleSave}
-            />
-            <ConfirmDialog
-                open={openDialog}
-                onClose={handleCloseDialog}
-                onConfirm={handleConfirmDelete}
-            />
+            <UserFormPopup open={popupOpen} onClose={handleClosePopup} user={selectedUser} onSave={handleSave} />
+            <ConfirmDialog open={openDialog} onClose={handleCloseDialog} onConfirm={handleConfirmDelete} />
         </div>
     );
 };
