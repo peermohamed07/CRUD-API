@@ -4,6 +4,7 @@ import { Button, Card } from "@mui/material";
 import UserFormPopup from "./UserFormPopUp";
 import ConfirmDialog from "./ConfirmPopup";
 import "./UserListPage.css";
+import { MdEdit, MdDelete } from "react-icons/md";
 
 const UserListPage = () => {
     const [users, setUsers] = useState([]);
@@ -12,7 +13,7 @@ const UserListPage = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [popupOpen, setPopupOpen] = useState(false);
-
+    const [viewMode, setViewMode] = useState("table");
     const fetchUsers = async (page = 1) => {
         try {
             const res = await axios.get(`https://reqres.in/api/unknown?page=${page}`);
@@ -60,6 +61,15 @@ const UserListPage = () => {
         setSelectedUser(null);
         setPopupOpen(false);
     };
+    const handleEdit = (user) => {
+        console.log("Editing user:", user);
+    };
+
+    const handleDelete = (id) => {
+        if (window.confirm("Are you sure you want to delete this user?")) {
+            setUsers(users.filter((u) => u.id !== id));
+        }
+    };
 
     const handleSave = (formData) => {
         if (selectedUser) {
@@ -91,7 +101,6 @@ const UserListPage = () => {
         }
     };
 
-    // Filter users based on search
     const filteredUsers = users.filter((user) => {
         const fullName = `${user.first_name || ""} ${user.last_name || ""}`.toLowerCase();
         const name = (user.name || "").toLowerCase();
@@ -102,23 +111,20 @@ const UserListPage = () => {
     });
 
 
-    // Pagination
     const usersPerPage = 5;
     const indexOfLastUser = currentPage * usersPerPage;
     const indexOfFirstUser = indexOfLastUser - usersPerPage;
     const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
     const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-    // Load from localStorage on mount
     useEffect(() => {
         const storedUsers = localStorage.getItem("users");
         if (storedUsers) {
             setUsers(JSON.parse(storedUsers));
         } else {
-            fetchUsers(currentPage); // fetch if nothing in storage
+            fetchUsers(currentPage); 
         }
     }, [currentPage]);
 
-    // Whenever users change, save to localStorage
     useEffect(() => {
         if (users.length > 0) {
             localStorage.setItem("users", JSON.stringify(users));
@@ -154,54 +160,153 @@ const UserListPage = () => {
                                 </Button>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="overflow-x-auto table-container">
-                        <table className="min-w-full bg-white border border-gray-300 text-center border-collapse table-data">
-                            <thead>
-                                <tr className="bg-gray-100 table-headers border-b border-gray-300">
-                                    <th className="py-2 px-4 border border-gray-300">Avatar</th>
-                                    <th className="py-2 px-4 border border-gray-300">Email</th>
-                                    <th className="py-2 px-4 border border-gray-300">First Name</th>
-                                    <th className="py-2 px-4 border border-gray-300">Last Name</th>
-                                    <th className="py-2 px-4 border border-gray-300">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {currentUsers.map((user) => (
-                                    <tr key={user.id} className="table-row-style">
-                                        <td className="py-2 px-4 border border-gray-300">
-                                            <img
-                                                src={user.avatar}
-                                                alt={user.name}
-                                                className="w-10 h-10 rounded-full object-cover mx-auto image"
-                                                style={{ backgroundColor: user.color }}
-                                            />
-                                        </td>
-                                        <td className="py-2 px-4 border border-gray-300">{user.email}</td>
-                                        <td className="py-2 px-4 border border-gray-300">{user.first_name}</td>
-                                        <td className="py-2 px-4 border border-gray-300">{user.last_name}</td>
-                                        <td className="py-2 px-4 border border-gray-300">
-                                            <div
-                                                style={{ display: "flex", gap: "10px", justifyContent: "left" }}
-                                            >
-                                                <Button variant="contained" size="small" onClick={() => handleOpenPopup(user)}>
-                                                    Edit
-                                                </Button>
-                                                <Button variant="contained" color="error" size="small" onClick={() => handleOpenDialog(user.id)}>
-                                                    Delete
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        {/* Toggle View */}
+
                     </div>
+                    <div style={{ display: "flex", gap: "10px", paddingLeft: "20px", marginBottom: "10px" }}>
+                        <Button
+                            variant={viewMode === "table" ? "contained" : "outlined"}
+                            onClick={() => setViewMode("table")}
+                        >
+                            Table
+                        </Button>
+                        <Button
+                            variant={viewMode === "card" ? "contained" : "outlined"}
+                            onClick={() => setViewMode("card")}
+                        >
+                            Card
+                        </Button>
+                    </div>
+                    {viewMode === "table" ? (
+                        <div className="overflow-x-auto table-container">
+                            <table className="min-w-full bg-white border border-gray-300 text-center border-collapse table-data">
+                                <thead>
+                                    <tr className="bg-gray-100 table-headers border-b border-gray-300">
+                                        <th className="py-2 px-4 border border-gray-300">Avatar</th>
+                                        <th className="py-2 px-4 border border-gray-300">Email</th>
+                                        <th className="py-2 px-4 border border-gray-300">First Name</th>
+                                        <th className="py-2 px-4 border border-gray-300">Last Name</th>
+                                        <th className="py-2 px-4 border border-gray-300">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {currentUsers.map((user) => (
+                                        <tr key={user.id} className="table-row-style">
+                                            <td className="py-2 px-4 border border-gray-300">
+                                                <img
+                                                    src={user.avatar}
+                                                    alt={user.name}
+                                                    className="w-10 h-10 rounded-full object-cover mx-auto image"
+                                                    style={{ backgroundColor: user.color }}
+                                                />
+                                            </td>
+                                            <td className="py-2 px-4 border border-gray-300">{user.email}</td>
+                                            <td className="py-2 px-4 border border-gray-300">{user.first_name}</td>
+                                            <td className="py-2 px-4 border border-gray-300">{user.last_name}</td>
+                                            <td className="py-2 px-4 border border-gray-300">
+                                                <div style={{ display: "flex", gap: "10px", justifyContent: "left" }}>
+                                                    <Button variant="contained" size="small" onClick={() => handleOpenPopup(user)}>
+                                                        Edit
+                                                    </Button>
+                                                    <Button variant="contained" color="error" size="small" onClick={() => handleOpenDialog(user.id)}>
+                                                        Delete
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(250px, auto))",
+                            gap: "20px",
+                            padding: "20px",
+                            justifyContent: "start" 
+                        }}>
+                            {currentUsers.map((user) => (
+                                <Card
+                                    key={user.id}
+                                    component="div"
+                                    className="p-6 flex flex-col items-center justify-center shadow-md rounded-lg relative"
+                                >
+                                    <div style={{ position: "relative", width: "100%", display: "flex", justifyContent: "center", marginTop: "10px" }}>
+                                        <img
+                                            src={user.avatar}
+                                            alt={`${user.first_name} ${user.last_name}`}
+                                            style={{
+                                                borderRadius: "50%",
+                                                width: "60px",
+                                                height: "60px",
+                                                objectFit: "cover",
+                                            }}
+                                        />
+
+                                        <div
+                                            style={{
+                                                position: "absolute",
+                                                right: "10px",
+                                                top: "50%",
+                                                transform: "translateY(-50%)",
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                gap: "8px",
+                                            }}
+                                        >
+                                            <div
+                                                style={{ cursor: "pointer", color: "grey", fontSize: "20px" }}
+                                                onClick={() => handleOpenPopup(user)}
+                                            >
+                                                <MdEdit />
+                                            </div>
+                                            <div
+                                                style={{ cursor: "pointer", color: "grey", fontSize: "20px" }}
+                                                onClick={() => handleOpenDialog(user.id)}
+                                            >
+                                                <MdDelete />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        style={{
+                                            color: user.color,
+                                            padding: "5px 10px",
+                                            borderRadius: "5px",
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            alignItems: "center",
+                                            fontWeight: "bold",
+                                            marginBottom: "10px",
+                                            fontSize: "18px",
+                                            marginTop: "10px",
+                                        }}
+                                    >
+                                        {user.first_name} {user.last_name}
+                                    </div>
+
+                                    <div
+                                        style={{
+                                            fontSize: "14px",
+                                            color: "#555",
+                                            textAlign: "center",
+                                            marginBottom: "10px",
+                                        }}
+                                    >
+                                        {user.email}
+                                    </div>
+                                </Card>
+
+
+                            ))}
+                        </div>
+                    )}
                 </Card>
             </div>
 
-            {/* Pagination */}
             <div className="pagination" style={{ display: "flex", justifyContent: "center", gap: "5px", marginTop: "20px" }}>
                 {currentPage > 1 && (
                     <button onClick={() => setCurrentPage((prev) => prev - 1)} className="px-3 py-1 border rounded bg-white">
@@ -216,7 +321,7 @@ const UserListPage = () => {
                         style={{
                             backgroundColor: currentPage === i + 1 ? "blue" : "white",
                             color: currentPage === i + 1 ? "white" : "black",
-                            border: '1px solid black'
+                            border: "1px solid black",
                         }}
                     >
                         {i + 1}

@@ -16,14 +16,12 @@ const LoginPage = () => {
         e.preventDefault();
         setError("");
 
-        // Client-side check
         if (email !== "eve.holt@reqres.in" || password !== "cityslicka") {
             setError("Invalid email or password!");
-            return; // stop here
+            return; 
         }
 
         try {
-            // Only call API if credentials match
             const res = await axios.post(
                 "https://reqres.in/api/login",
                 { email, password }, {
@@ -51,7 +49,6 @@ const LoginPage = () => {
         <div className="login-container">
             <div className="login-card">
                 <form onSubmit={handleLogin}>
-                    {/* Email */}
                     <div className="input-group">
                         <FaUser className="input-icon" />
                         <TextField
@@ -69,7 +66,6 @@ const LoginPage = () => {
                         />
                     </div>
 
-                    {/* Password */}
                     <div className="input-group">
                         <FaLock className="input-icon" />
                         <TextField
